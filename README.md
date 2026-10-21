@@ -35,3 +35,9 @@ Anyone can access this website and its event data. This publishes the uploaded C
 ## GitHub Pages
 
 The `docs/` directory contains the public website and event snapshot. In the GitHub repository, open Settings → Pages, select Deploy from a branch, select `main` and `/docs`, and save. GitHub will show the website address after deployment. Pages availability depends on the repository visibility and account plan. The exported data is deliberately public; do not add private spreadsheet notes or credentials to `docs/`.
+
+## Calendar and list views
+
+Use the List view / Calendar view buttons to switch layouts. The calendar supports month navigation and expandable event details. Search, source, approval, month and import-review filters apply to both views. Undated events remain visible below the calendar. On narrow screens the calendar scrolls horizontally.
+
+Optional UI checks require jsdom in a development tools directory (the website has no runtime dependency). Run `NODE_PATH=/path/to/dev-tools/node_modules node test_calendar.cjs`; set `TEST_SITE_DIR=docs` to check the GitHub Pages version as well. Tests cover date alignment, leap years, month navigation, filters, details and undated entries.
