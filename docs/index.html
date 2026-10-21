@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Collegiatte · School events</title><link rel="stylesheet" href="./style.css"><script src="./app.js" defer></script></head>
+<body><header><a class="brand" href="./">c<span>Collegiatte</span></a><span class="staff">SCHOOL EVENTS</span></header>
+<main><div class="eyebrow">SCHOOL YEAR 2026 — 2027</div><h1>A little more connected.</h1><p class="intro">Your school’s events, plans, and people. All in one place.</p>
+<section class="stats" aria-label="Event summary"><div><strong id="total">—</strong><span>Events in the calendar</span></div><div><strong id="submitted">—</strong><span>New submissions</span></div><div><strong id="review">—</strong><span>Need import review</span></div></section>
+<div class="section-heading"><h2>The school calendar</h2><span id="source">Loading events…</span></div>
+<p class="notice">Open calendar · Includes tentative and unapproved events. Uploaded snapshots are in use; live Google Sheets sync is not connected.</p>
+<section class="filters" aria-label="Filter events"><label>Search<input id="search" type="search" placeholder="Event, location, or organizer"></label><label>Month<select id="month"><option value="">All months</option></select></label><label>Source<select id="origin"><option value="">Both spreadsheets</option><option>Older calendar</option><option>New submissions</option></select></label><label>Approval<select id="approval"><option value="">All approval statuses</option><option value="approved">Approved</option><option value="pending">Not yet approved</option><option value="unknown">Not provided</option></select></label><label class="check"><input id="flagged" type="checkbox"> Needs import review</label></section>
+<p id="results" role="status"></p><div id="events" class="events"></div><p id="error" role="alert" hidden></p>
+<footer>Collegiatte · Built for the people who make school happen.</footer></main></body></html>
