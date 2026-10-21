@@ -1,4 +1,4 @@
-# Collegiatte
+# Collegiate
 
 A public school event dashboard for school year 2026–2027. Anyone who can reach the website can view its events without a password. Python 3.12+ is required; no third-party dependencies.
 
@@ -14,7 +14,7 @@ The initial snapshot is `data/events.csv`, excluded from Git and retained in the
 
 `python3 import_events.py --old /path/to/old.csv --new /path/to/new.csv`
 
-This replaces the local combined CSV, preserves possible duplicates for review, and never edits Google Sheets. Years use the 2026–2027 school year; missing dates are flagged. Live Google Sheets synchronization is not connected.
+This replaces the local combined CSV, preserves possible duplicates for review, and never edits Google Sheets. Years use the 2026–2027 school year; missing dates are flagged. Live new submissions are fetched from the configured Google Apps Script endpoint on page load and every five minutes while the page is open. Older events remain a one-time import.
 
 ## Validate
 
@@ -30,7 +30,7 @@ A ready-to-upload public website is generated with `python3 export_site.py /work
 4. Netlify provides the public website address. Keep the site in your account so you can update it.
 5. Open that address in a private/incognito browser window and verify the calendar loads without signing in.
 
-Anyone can access this website and its event data. This publishes the uploaded CSV snapshots; Google Sheets changes do not update the exported website. Re-import updated CSVs, export to a new output directory, and upload a new deployment to the same Netlify site to update it.
+Anyone can access this website and its event data. The published website uses the uploaded snapshot as a fallback and fetches live new submissions from the configured Apps Script feed. Older calendar events remain a one-time import. Re-import older CSVs, export and upload a replacement deployment to update those historical events.
 
 ## GitHub Pages
 
@@ -41,3 +41,11 @@ The `docs/` directory contains the public website and event snapshot. In the Git
 Use the List view / Calendar view buttons to switch layouts. The calendar supports month navigation and expandable event details. Search, source, approval, month and import-review filters apply to both views. Undated events remain visible below the calendar. On narrow screens the calendar scrolls horizontally.
 
 Optional UI checks require jsdom in a development tools directory (the website has no runtime dependency). Run `NODE_PATH=/path/to/dev-tools/node_modules node test_calendar.cjs`; set `TEST_SITE_DIR=docs` to check the GitHub Pages version as well. Tests cover date alignment, leap years, month navigation, filters, details and undated entries.
+
+## Google Sheets synchronization
+
+The configured public Apps Script feed is fetched by visitors' browsers on load, every five minutes, after returning to an overdue tab, or via Refresh now. Both views share the refreshed events. New submissions replace their previous snapshot, including edits and deletions; older calendar imports remain. Missing dates and possible duplicate titles on the same date are flagged. Feed fields are explicitly selected; emails and private notes are discarded. Failed requests retain the last successful data (or the uploaded snapshot initially), with a visible connection warning.
+
+The Apps Script deployment must run as the owner with access set to Anyone, return JSON with an events array, and permit browser fetches after Google's redirect. A sign-in page or script exception prevents synchronization. Do not use no-cors: opaque responses cannot be read. Apps Script code changes require a new deployment version under Manage deployments while preserving the /exec URL.
+
+Live integration could not be verified from the cloud runtime because its network proxy blocked script.google.com. The Google domains were added to the environment draft, not applied. Simulated UI tests pass; verify the public site's status reads Google Sheets synced at before claiming live connectivity. Optional sync tests: NODE_PATH=/path/to/dev-tools/node_modules node test_sync.cjs.

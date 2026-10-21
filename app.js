@@ -101,14 +101,87 @@ $('list-view').addEventListener('click',()=>showView('list'));
 $('calendar-view').addEventListener('click',()=>showView('calendar'));
 $('prev-month').addEventListener('click',()=>moveMonth(-1));
 $('next-month').addEventListener('click',()=>moveMonth(1));
+const SHEETS_FEED = 'https://script.google.com/macros/s/AKfycbzjWJwtToxnpag2NZmisIbmSKx4UEynmT2O2WpL_8Stg3xj2HB7KwNfTjrpkb8VrI0m/exec';
+let importedEvents = [];
+let syncing = false;
+let lastSynced = null;
+function applyEvents(next) {
+  events = next.slice().sort((a,b)=>(a.date || '9999').localeCompare(b.date || '9999') || a.title.localeCompare(b.title));
+  $('total').textContent = events.length;
+  $('submitted').textContent = events.filter(e=>e.source==='New submissions').length;
+  $('review').textContent = events.filter(e=>e.review).length;
+  const chosen=$('month').value;
+  const months=[...new Set(events.filter(e=>e.date).map(e=>e.date.slice(0,7)).concat(chosen ? [chosen] : []))].sort();
+  $('month').replaceChildren();const all=node('option','All months');all.value='';$('month').append(all);
+  for(const month of months) {
+    const option=node('option',new Date(month+'-01T12:00:00').toLocaleDateString('en-US',{month:'long',year:'numeric'}));
+    option.value=month;$('month').append(option);
+  }
+  $('month').value=chosen;
+  render();
+}
+function readFeed(data) {
+  if (!data || !Array.isArray(data.events)) throw new Error('Invalid events feed');
+  const fields=['title','date','time','location','organizer','type','grades','audience','approval','confirmation','review'];
+  return data.events.map((row,index)=>{
+    if(!row || typeof row.title!=='string' || !row.title.trim()) throw new Error('Invalid event title');
+    const event={};
+    for(const field of fields) event[field]=typeof row[field]==='string' ? row[field].trim() : '';
+    if(event.date) {
+      const parsed=new Date(event.date+'T12:00:00Z');
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(event.date) || !Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0,10)!==event.date) {
+        event.date='';event.review='Date needs review';
+      }
+    }
+    if(!event.date && !event.review) event.review='Date needs review';
+    event.source='New submissions';event.source_row=index+2;
+    return event;
+  });
+}
+function mergeLiveEvents(fresh) {
+  const older=importedEvents.filter(e=>e.source!=='New submissions').map(e=>({...e}));
+  const normalize=text=>text.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+  for(const event of fresh) {
+    const title=normalize(event.title);
+    if(!title || !event.date) continue;
+    for(const old of older) {
+      const oldTitle=normalize(old.title);
+      if(old.date!==event.date || !oldTitle || !(title.includes(oldTitle) || oldTitle.includes(title))) continue;
+      for(const candidate of [event,old]) if(!candidate.review.includes('Possible duplicate')) candidate.review=[candidate.review,'Possible duplicate; review before merging'].filter(Boolean).join('; ');
+    }
+  }
+  return older.concat(fresh);
+}
+async function syncSheets() {
+  if(syncing) return;
+  syncing=true;$('refresh-events').disabled=true;
+  $('source').textContent='Checking Google Sheets…';
+  const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),20000);
+  try {
+    const response=await fetch(SHEETS_FEED,{signal:controller.signal,cache:'no-store',credentials:'omit',redirect:'follow'});
+    if(!response.ok) throw new Error('Sheet request failed');
+    const fresh=readFeed(await response.json());
+    applyEvents(mergeLiveEvents(fresh));lastSynced=new Date();
+    $('source').textContent='Google Sheets synced at '+lastSynced.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+    $('sync-status').textContent='New submissions update automatically every 5 minutes while this page is open. Older calendar events are retained from your import.';
+  } catch(error) {
+    $('source').textContent='Google Sheets connection unavailable';
+    $('sync-status').textContent=lastSynced ? 'Showing the last successful update from '+lastSynced.toLocaleString()+'. Automatic refresh will retry; you can also select Refresh now.' : 'Showing uploaded spreadsheet snapshots. Live Google Sheets updates could not be loaded. Automatic refresh will retry; you can also select Refresh now.';
+  } finally {
+    clearTimeout(timer);syncing=false;$('refresh-events').disabled=false;
+  }
+}
+$('refresh-events').addEventListener('click',syncSheets);
 async function load() {
   try {
     const response = await fetch('/api/events'); if (!response.ok) throw new Error('Could not load the event calendar. Please reload or ask your administrator.');
-    const data = await response.json(); events = data.events.sort((a,b)=>(a.date || '9999').localeCompare(b.date || '9999') || a.title.localeCompare(b.title));
-    $('total').textContent = events.length; $('submitted').textContent = events.filter(e=>e.source==='New submissions').length; $('review').textContent = events.filter(e=>e.review).length;
-    $('source').textContent = data.mode;
-    for (const month of [...new Set(events.filter(e=>e.date).map(e=>e.date.slice(0,7)))].sort()) { const option=node('option',new Date(month+'-01T12:00:00').toLocaleDateString('en-US',{month:'long',year:'numeric'})); option.value=month; $('month').append(option); }
-    render();
+    const data = await response.json();importedEvents=data.events;
+    applyEvents(importedEvents);
+    await syncSheets();
+    setInterval(syncSheets,5*60*1000);
+    document.addEventListener('visibilitychange',()=>{
+      if(!document.hidden && (!lastSynced || Date.now()-lastSynced.getTime()>=5*60*1000)) syncSheets();
+    });
   } catch (error) { $('source').textContent='Calendar unavailable'; $('error').hidden=false; $('error').textContent=error.message; }
 }
 load();

@@ -1,4 +1,4 @@
-"""Collegiatte public event dashboard. Python standard library only."""
+"""Collegiate public event dashboard. Python standard library only."""
 import csv
 import json
 import os
@@ -24,7 +24,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header('X-Content-Type-Options', 'nosniff')
         self.send_header('X-Frame-Options', 'DENY')
         self.send_header('Referrer-Policy', 'no-referrer')
-        self.send_header('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; frame-ancestors 'none'; base-uri 'none'")
+        self.send_header('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://script.google.com https://script.googleusercontent.com; frame-ancestors 'none'; base-uri 'none'")
         self.end_headers()
         self.wfile.write(body)
 
@@ -46,5 +46,5 @@ class Handler(BaseHTTPRequestHandler):
 if __name__ == '__main__':
     host = os.environ.get('HOST', '127.0.0.1')
     server = ThreadingHTTPServer((host, int(os.environ.get('PORT', '8000'))), Handler)
-    print('Collegiatte public dashboard started.', flush=True)
+    print('Collegiate public dashboard started.', flush=True)
     server.serve_forever()

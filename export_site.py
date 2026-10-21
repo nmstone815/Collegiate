@@ -22,7 +22,7 @@ def export(output):
     (output / 'app.js').write_text(js)
     shutil.copyfile(ROOT / 'style.css', output / 'style.css')
     (output / 'events.json').write_text(json.dumps({'events': events, 'mode': 'Uploaded CSV snapshots', 'school_year': '2026–2027'}, ensure_ascii=False))
-    (output / '_headers').write_text('/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: no-referrer\n  X-Frame-Options: DENY\n  Content-Security-Policy: default-src \'self\'; script-src \'self\'; style-src \'self\'; frame-ancestors \'none\'; base-uri \'none\'\n  Cache-Control: no-cache\n')
+    (output / '_headers').write_text('/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: no-referrer\n  X-Frame-Options: DENY\n  Content-Security-Policy: default-src \'self\'; script-src \'self\'; style-src \'self\'; connect-src \'self\' https://script.google.com https://script.googleusercontent.com; frame-ancestors \'none\'; base-uri \'none\'\n  Cache-Control: no-cache\n')
     archive = output.with_suffix('.zip')
     with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED) as bundle:
         for path in sorted(output.iterdir()):

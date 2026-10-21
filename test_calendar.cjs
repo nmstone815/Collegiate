@@ -6,7 +6,7 @@ const {JSDOM}=require('jsdom');
 (async()=>{
  const dom=new JSDOM(fs.readFileSync(path.join(site,'index.html'),'utf8'),{runScripts:'outside-only',url:'http://localhost/'});
  const w=dom.window;const d=w.document;
- w.fetch=async()=>({ok:true,json:async()=>JSON.parse(fs.readFileSync('docs/events.json','utf8'))});
+ w.fetch=async(url)=>({ok:true,json:async()=>{const data=JSON.parse(fs.readFileSync('docs/events.json','utf8'));return url.startsWith('https:') ? {events:data.events.filter(e=>e.source==='New submissions')} : data;}});
  w.eval(fs.readFileSync(path.join(site,'app.js'),'utf8')+'\nwindow.testCalendarDays = calendarDays;');
  await new Promise(resolve=>setImmediate(resolve));
  const change=(id,value)=>{d.getElementById(id).value=value;d.getElementById(id).dispatchEvent(new w.Event('input'));};
