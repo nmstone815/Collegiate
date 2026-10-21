@@ -16,7 +16,7 @@ class ExportTests(unittest.TestCase):
                 self.assertEqual(len(data['events']),111)
                 for event in data['events']:
                     self.assertEqual(set(event),set(export_site.PUBLIC_FIELDS))
-                self.assertIn(b"fetch('./events.json')", bundle.read('app.js'))
+                self.assertIn(b"fetch('./events.json',", bundle.read('app.js'))
                 self.assertIn(b'href="./style.css"',bundle.read('index.html'))
             with self.assertRaises(FileExistsError):
                 export_site.export(folder)

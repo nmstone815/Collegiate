@@ -105,8 +105,17 @@ const SHEETS_FEED = 'https://script.google.com/macros/s/AKfycbzjWJwtToxnpag2NZmi
 let importedEvents = [];
 let syncing = false;
 let lastSynced = null;
+function applyEventCorrections(event) {
+  const corrected={...event};
+  corrected.title=corrected.title.replace(/\bHON\s+(?:Support|Supprt)\b/gi,'Collegiate Collective');
+  if(/\bchampionship\s+days?\b/i.test(corrected.title)) {
+    corrected.organizer="Ms. Stone, Mrs. Feliz and GLC's";
+    corrected.time='2:07 PM – 3:40 PM';
+  }
+  return corrected;
+}
 function applyEvents(next) {
-  events = next.slice().sort((a,b)=>(a.date || '9999').localeCompare(b.date || '9999') || a.title.localeCompare(b.title));
+  events = next.map(applyEventCorrections).sort((a,b)=>(a.date || '9999').localeCompare(b.date || '9999') || a.title.localeCompare(b.title));
   $('total').textContent = events.length;
   $('submitted').textContent = events.filter(e=>e.source==='New submissions').length;
   $('review').textContent = events.filter(e=>e.review).length;
@@ -152,18 +161,33 @@ function mergeLiveEvents(fresh) {
   }
   return older.concat(fresh);
 }
-async function syncSheets() {
+async function refreshImportedEvents() {
+  const response=await fetch('./events.json', {cache:'no-store',signal:AbortSignal.timeout(15000)});
+  if(!response.ok) throw new Error('Could not refresh imported events');
+  const data=await response.json();
+  if(!data || !Array.isArray(data.events)) throw new Error('Invalid imported events');
+  importedEvents=data.events;
+}
+async function syncSheets(refreshImports=true) {
   if(syncing) return;
   syncing=true;$('refresh-events').disabled=true;
   $('source').textContent='Checking Google Sheets…';
   const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),20000);
+  let importsRefreshed=!refreshImports;
   try {
+    if(refreshImports) {
+      try {
+        await refreshImportedEvents();importsRefreshed=true;
+        const submissions=lastSynced ? events.filter(e=>e.source==='New submissions') : importedEvents.filter(e=>e.source==='New submissions');
+        applyEvents(importedEvents.filter(e=>e.source!=='New submissions').concat(submissions));
+      } catch(error) { /* Keep the previous imported events if this request fails. */ }
+    }
     const response=await fetch(SHEETS_FEED,{signal:controller.signal,cache:'no-store',credentials:'omit',redirect:'follow'});
     if(!response.ok) throw new Error('Sheet request failed');
     const fresh=readFeed(await response.json());
     applyEvents(mergeLiveEvents(fresh));lastSynced=new Date();
     $('source').textContent='Google Sheets synced at '+lastSynced.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
-    $('sync-status').textContent='New submissions update automatically every 5 minutes while this page is open. Older calendar events are retained from your import.';
+    $('sync-status').textContent=importsRefreshed ? 'Calendar refreshed. Automatic updates run every 5 minutes while this page is open.' : 'Google submissions updated, but the imported calendar could not be refreshed. Showing its previous version; refresh will retry.';
   } catch(error) {
     $('source').textContent='Google Sheets connection unavailable';
     $('sync-status').textContent=lastSynced ? 'Showing the last successful update from '+lastSynced.toLocaleString()+'. Automatic refresh will retry; you can also select Refresh now.' : 'Showing uploaded spreadsheet snapshots. Live Google Sheets updates could not be loaded. Automatic refresh will retry; you can also select Refresh now.';
@@ -171,13 +195,12 @@ async function syncSheets() {
     clearTimeout(timer);syncing=false;$('refresh-events').disabled=false;
   }
 }
-$('refresh-events').addEventListener('click',syncSheets);
+$('refresh-events').addEventListener('click',()=>syncSheets());
 async function load() {
   try {
-    const response = await fetch('./events.json'); if (!response.ok) throw new Error('Could not load the event calendar. Please reload or ask your administrator.');
-    const data = await response.json();importedEvents=data.events;
+    await refreshImportedEvents();
     applyEvents(importedEvents);
-    await syncSheets();
+    await syncSheets(false);
     setInterval(syncSheets,5*60*1000);
     document.addEventListener('visibilitychange',()=>{
       if(!document.hidden && (!lastSynced || Date.now()-lastSynced.getTime()>=5*60*1000)) syncSheets();

@@ -15,8 +15,8 @@ def export(output):
         raise FileExistsError(f'Choose a new output directory: {output}')
     with (ROOT / 'data/events.csv').open(encoding='utf-8-sig', newline='') as stream:
         events = [{key: row.get(key, '') for key in PUBLIC_FIELDS} for row in csv.DictReader(stream)]
-    html = (ROOT / 'index.html').read_text().replace('href="/style.css"', 'href="./style.css"').replace('src="/app.js"', 'src="./app.js"').replace('href="/"', 'href="./"')
-    js = (ROOT / 'app.js').read_text().replace("fetch('/api/events')", "fetch('./events.json')")
+    html = (ROOT / 'index.html').read_text().replace('href="/style.css"', 'href="./style.css"').replace('src="/app.js', 'src="./app.js').replace('href="/"', 'href="./"')
+    js = (ROOT / 'app.js').read_text().replace("'/api/events'", "'./events.json'")
     output.mkdir(parents=True)
     (output / 'index.html').write_text(html)
     (output / 'app.js').write_text(js)
