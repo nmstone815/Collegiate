@@ -108,6 +108,11 @@ let lastSynced = null;
 function applyEventCorrections(event) {
   const corrected={...event};
   corrected.title=corrected.title.replace(/\bHON\s+(?:Support|Supprt)\b/gi,'Collegiate Collective');
+  if(/\bCollegiate Collective\b/i.test(corrected.title)) {
+    corrected.organizer='Mrs. Okoye and the Collective';
+    corrected.location='Staff Entrance';
+    corrected.time='1:00 PM – 1:45 PM';
+  }
   if(/\bchampionship\s+days?\b/i.test(corrected.title)) {
     corrected.organizer="Ms. Stone, Mrs. Feliz and GLC's";
     corrected.time='2:07 PM – 3:40 PM';
